@@ -16,6 +16,13 @@
     "ghcr.io/devcontainers/features/conda:1": {
       "version": "latest",
       "addCondaForge": true
+    },
+    // 首次建 Codespace 时报错:
+    //   "error getting ssh server details: failed to start SSH server"
+    // GitHub 官方错误提示直接给出的修复方式就是加这个 feature,
+    // 不是自己发明的绕过方案。gh codespace ssh 依赖它才能连进容器。
+    "ghcr.io/devcontainers/features/sshd:1": {
+      "version": "latest"
     }
   },
 
