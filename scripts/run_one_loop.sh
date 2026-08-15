@@ -27,8 +27,8 @@ echo "==> 本次 loop 数: ${LOOP_N}"
 
 if [ -n "${RESUME_PATH}" ]; then
   echo "==> 从 checkpoint 续跑: ${RESUME_PATH}"
-  rdagent fin_factor --path "${RESUME_PATH}" --loop_n "${LOOP_N}"
+  rdagent fin_factor --path "${RESUME_PATH}" --loop-n "${LOOP_N}"
 else
   echo "==> 全新一轮 fin_factor"
-  rdagent fin_factor --loop_n "${LOOP_N}"
+  rdagent fin_factor --loop-n "${LOOP_N}"
 fi
