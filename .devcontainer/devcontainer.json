@@ -1,0 +1,54 @@
+{
+  "name": "rdagent-lab",
+
+  // Ubuntu 22.04 基础镜像。RD-Agent 官方明确说明只支持 Linux,
+  // 所以云上/本地都统一在 Linux 容器里跑,不裸跑 macOS。
+  "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
+
+  "features": {
+    // RD-Agent 会在运行时自己启动 Qlib 容器来执行因子代码,
+    // 所以这个开发容器内部必须能用 docker —— 即 docker-in-docker。
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "version": "latest",
+      "moby": true
+    },
+    // 官方安装步骤是 conda create -n rdagent python=3.10,所以需要 conda。
+    "ghcr.io/devcontainers/features/conda:1": {
+      "version": "latest",
+      "addCondaForge": true
+    }
+  },
+
+  // 默认机型 2 核/8GB/32GB 磁盘。Qlib 镜像解压约 7GB + 数据约 3GB +
+  // conda 环境约 3GB,32GB 够用但不宽裕,显式声明避免被分到更小的盘。
+  "hostRequirements": {
+    "cpus": 2,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+
+  // 非敏感配置直接写死在这里(不是 Key,公开也无所谓)。
+  // 两个真正的密钥 DEEPSEEK_API_KEY / LITELLM_PROXY_API_KEY
+  // 不出现在任何文件里 —— 由 GitHub Codespaces Secrets 在容器启动时
+  // 自动注入为环境变量,全程不经过 Claude、不进仓库、不进 git 历史。
+  "remoteEnv": {
+    "CHAT_MODEL": "deepseek/deepseek-chat",
+    "EMBEDDING_MODEL": "litellm_proxy/BAAI/bge-m3",
+    "LITELLM_PROXY_API_BASE": "https://api.siliconflow.cn/v1",
+    "REASONING_THINK_RM": "True"
+  },
+
+  // 容器建好后自动装 RD-Agent(脚本幂等,重复执行安全)
+  "postCreateCommand": "bash .devcontainer/setup_env.sh",
+
+  // 19899 = RD-Agent 官方 UI 端口
+  "forwardPorts": [19899],
+  "portsAttributes": {
+    "19899": {
+      "label": "RD-Agent UI",
+      "onAutoForward": "notify"
+    }
+  },
+
+  "remoteUser": "vscode"
+}

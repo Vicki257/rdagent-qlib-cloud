@@ -1,0 +1,22 @@
+# === 绝不提交的东西 ===
+# API Key 只存在本机 .env,永不进仓库
+.env
+.env.local
+*.key
+
+# 实验日志(体积大,且是本机产物)
+log/
+git_ignore_folder/
+
+# Qlib 数据快照(如果有人误放进来)
+qlib_data/
+*.bin
+
+# Python
+__pycache__/
+*.py[cod]
+.ipynb_checkpoints/
+.venv/
+
+# macOS
+.DS_Store
