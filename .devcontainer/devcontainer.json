@@ -39,6 +39,7 @@
   // 不出现在任何文件里 —— 由 GitHub Codespaces Secrets 在容器启动时
   // 自动注入为环境变量,全程不经过 Claude、不进仓库、不进 git 历史。
   "remoteEnv": {
+    "BACKEND": "rdagent.oai.backend.LiteLLMAPIBackend",
     "CHAT_MODEL": "deepseek/deepseek-chat",
     "EMBEDDING_MODEL": "litellm_proxy/BAAI/bge-m3",
     "LITELLM_PROXY_API_BASE": "https://api.siliconflow.cn/v1",

@@ -16,12 +16,12 @@ set -euo pipefail
 ENV_NAME="rdagent"
 PY_VER="3.10"   # 官方 CI 充分测试的版本(3.10 / 3.11)
 
-echo "==> [1/4] 定位 conda"
+echo "==> [1/6] 定位 conda"
 # shellcheck disable=SC1091
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda --version
 
-echo "==> [2/4] 创建 conda 环境 ${ENV_NAME} (python=${PY_VER})"
+echo "==> [2/6] 创建 conda 环境 ${ENV_NAME} (python=${PY_VER})"
 if conda env list | awk '{print $1}' | grep -qx "${ENV_NAME}"; then
   echo "    环境 ${ENV_NAME} 已存在,跳过创建"
 else
@@ -31,20 +31,31 @@ fi
 conda activate "${ENV_NAME}"
 python --version
 
-echo "==> [3/4] 安装 rdagent"
+echo "==> [3/6] 安装 rdagent"
 python -m pip install --upgrade pip
 python -m pip install rdagent
 rdagent --help >/dev/null 2>&1 || true
 echo "    已安装 rdagent 版本: $(python -m pip show rdagent | awk '/^Version:/{print $2}')"
 
-echo "==> [4/5] 固定 Qlib 数据目录 (容器销毁后数据仍在此路径)"
+echo "==> [4/6] 修正依赖版本漂移: pydantic-ai-slim"
+# 已知坑(2026-08-16 实测踩到): PyPI 上的 rdagent 0.8.0 包对
+# pydantic-ai-slim 的版本约束比官方 GitHub 仓库自己的 requirements.txt
+# 宽松,pip 会解析到最新的 pydantic-ai-slim(如 2.x),但 RD-Agent 0.8.0
+# 的代码里还在用 1.x 的旧 API,导致:
+#   ImportError: cannot import name 'MCPServerStreamableHTTP'
+#   from 'pydantic_ai.mcp'
+# 这里按官方 requirements.txt 的精确版本重新锁定,不是自己发明的绕过方案:
+#   https://github.com/microsoft/RD-Agent/blob/main/requirements.txt
+python -m pip install "pydantic-ai-slim[mcp,openai,prefect]==1.66.0"
+
+echo "==> [5/6] 固定 Qlib 数据目录 (容器销毁后数据仍在此路径)"
 mkdir -p "${HOME}/.qlib/qlib_data/cn_data"
 # 已知 issue microsoft/RD-Agent#794:容器内 /root/.qlib/qlib_data 被以 ro 挂载。
 # 这里先确保宿主侧目录本身可写,挂载模式在运行阶段单独处理。
 chmod -R u+rwX "${HOME}/.qlib"
 ls -ld "${HOME}/.qlib/qlib_data"
 
-echo "==> [5/5] 下载 Qlib 中国股数据 (csi300 / Alpha158 用)"
+echo "==> [6/6] 下载 Qlib 中国股数据 (csi300 / Alpha158 用)"
 # 官方 README 原话:"The official dataset is disabled temporarily."
 # 官方推荐的社区替代源(microsoft/qlib README 明确指向此地址):
 #   https://github.com/chenditc/investment_data/releases
@@ -65,7 +76,10 @@ echo "============================================================"
 echo "安装完成。"
 echo
 echo "云端(Codespaces): DEEPSEEK_API_KEY / LITELLM_PROXY_API_KEY"
-echo "  已通过 GitHub Codespaces Secrets 自动注入,无需手动配置。"
+echo "  已通过 GitHub Codespaces Secrets 自动注入。"
+echo "  ⚠️ 注意:这些变量只在【登录 shell】里能读到。"
+echo "  用 'gh codespace ssh -- 命令' 直接跑命令是看不到它们的,"
+echo "  必须包一层: gh codespace ssh -- 'bash -lc \"命令\"'"
 echo
 echo "本地部署时才需要:"
 echo "  1) cp .env.template .env  并填入你自己的 API Key"
