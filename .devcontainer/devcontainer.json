@@ -43,7 +43,12 @@
     "CHAT_MODEL": "deepseek/deepseek-chat",
     "EMBEDDING_MODEL": "litellm_proxy/BAAI/bge-m3",
     "LITELLM_PROXY_API_BASE": "https://api.siliconflow.cn/v1",
-    "REASONING_THINK_RM": "True"
+    "REASONING_THINK_RM": "True",
+    // 已知坑(2026-08-16 实测): Qlib 的 qrun 底层用 MLflow 记录实验结果,
+    // 新版 MLflow 默认拒绝纯文件系统后端(./mlruns),导致训练/回测这一步
+    // 直接报错、被 RD-Agent 的 loop 框架静默 skip 掉。
+    // 这个环境变量是 MLflow 官方报错信息里自己给出的解法。
+    "MLFLOW_ALLOW_FILE_STORE": "true"
   },
 
   // 容器建好后自动装 RD-Agent(脚本幂等,重复执行安全)
