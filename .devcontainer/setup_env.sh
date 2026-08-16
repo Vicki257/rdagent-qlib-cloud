@@ -64,6 +64,26 @@ echo "==> [4b/6] 修复 generate.py 已知 bug(选股池与取数窗口不对齐
 #                     https://github.com/microsoft/RD-Agent/issues/1002
 python3 "$(dirname "${BASH_SOURCE[0]}")/patch_generate_py.py"
 
+echo "==> [4c/6] 备份官方原版中国股票配置(以后 switch_market.sh cn 要用)"
+CN_BACKUP_DIR="${PWD}/cn_config_backup"
+mkdir -p "${CN_BACKUP_DIR}"
+RDAGENT_QLIB_DIR="$(python -c 'import rdagent.scenarios.qlib as m, os; print(os.path.dirname(m.__file__))')"
+for f in \
+  experiment/factor_template/conf_baseline.yaml \
+  experiment/factor_template/conf_combined_factors.yaml \
+  experiment/factor_data_template/generate.py \
+  experiment/prompts.yaml \
+  experiment/factor_experiment.py
+do
+  cp "${RDAGENT_QLIB_DIR}/${f}" "${CN_BACKUP_DIR}/$(basename "${f}")"
+done
+echo "    备份到: ${CN_BACKUP_DIR}"
+
+echo "==> [4d/6] 修复市场描述文字写死的问题(切日股时 AI 却以为在研究中国股票)"
+# 已知坑(2026-08-16/17 实测踩到): 改 provider_uri(用哪个市场的数据)和改
+# 网页报告/AI 场景描述里的说明文字,原本是两件不相关的事,容易错位。
+python3 "$(dirname "${BASH_SOURCE[0]}")/patch_market_switch.py"
+
 echo "==> [5/6] 固定 Qlib 数据目录 (容器销毁后数据仍在此路径)"
 mkdir -p "${HOME}/.qlib/qlib_data/cn_data"
 # 已知 issue microsoft/RD-Agent#794:容器内 /root/.qlib/qlib_data 被以 ro 挂载。

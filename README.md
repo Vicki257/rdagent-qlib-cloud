@@ -185,18 +185,26 @@ http://localhost:19899
 
 具体的转换脚本、数据字段映射、如何在新 Codespace 里重新灌入这份数据,记录在**另一个私有仓库**里(不公开,因为里面涉及具体数据处理方法论):`~/jquants/qlib_bridge/README.md`。
 
-### 5b. 接入 RD-Agent 场景层(还没做,下次会话的任务)
+### 5b. 接入 RD-Agent 场景层(部分完成,2026-08-17 更新)
 
-⚠️ 数据层通了,不代表 RD-Agent 自动因子生成这一层通了——`fin_factor` 场景的配置模板和 LLM 场景描述,目前是**照着 A 股写死的**,证据(2026-08-16 实测查证,不是猜的):
+⚠️ 数据层通了,不代表 RD-Agent 自动因子生成这一层全通了。`fin_factor` 场景的配置模板原本**照着 A 股写死**(2026-08-16 实测查证):`conf_baseline.yaml` 硬编码 `market: csi300`、`benchmark: SH000300`、`provider_uri: ~/.qlib/qlib_data/cn_data`、`region: cn`(Qlib 官方 `region` 参数只有 `REG_CN`/`REG_US` 两个预设,没有日本——[官方文档](https://qlib.readthedocs.io/en/latest/start/initialization.html))。
 
-- `conf_baseline.yaml` 里硬编码 `market: csi300`、`benchmark: SH000300`、`provider_uri: ~/.qlib/qlib_data/cn_data`、`region: cn`,以及 A 股特有的涨跌停阈值(9.5%)
-- Qlib 官方 `region` 参数**只有 `REG_CN` 和 `REG_US` 两个预设**([官方文档](https://qlib.readthedocs.io/en/latest/start/initialization.html)),没有日本
+**已经修好的部分**:
+1. **数据源配置**(`conf_baseline.yaml`/`conf_combined_factors.yaml` 的 `provider_uri`)——可切换
+2. **AI 场景描述文字错位的 bug**——原本这段文字(显示在网页报告的 Config 表格里,也讲给 LLM 听)是写死的 `CSI300 / 2008-2020`,跟实际用的数据完全无关。2026-08-16 晚上真实踩过这个坑:切了日股数据但报告还显示"CSI300"。已修复,补丁在 `.devcontainer/patch_market_switch.py`,原理是把这段文字改成读环境变量的模板,默认值不变(不影响中国股票那套)。
 
-| 要改的文件 | 改什么 |
-|---|---|
-| `rdagent/scenarios/qlib/experiment/factor_template/conf_baseline.yaml`(和 `conf_combined_factors.yaml`) | `provider_uri` 指向 `jp_smallcap`;去掉 `region: cn`,手动配置(日股涨跌停不是固定比例,是阶梯表,第一版可以先不模拟);`market`/`benchmark` 换成日股小盘股票池和合适的基准 |
-| RD-Agent 因子场景的 prompt/scenario 描述文件(在 `rdagent/scenarios/qlib/` 下,**具体是哪个文件还没定位**) | 官方默认场景描述是针对 A 股写的,换日股需要检查这些假设是否还成立,不然 LLM 会带着"这是 A 股"的错误语境去生成因子 |
-| `.devcontainer/setup_env.sh` | 加一步:每次重建 Codespace,自动从私有仓库拉取/重建 `jp_smallcap` 数据(参考 `~/jquants/qlib_bridge/README.md` 的"从头恢复步骤") |
+**怎么切换市场**(一条命令,两件事一起改,不会再错位):
+```bash
+source scripts/switch_market.sh jp   # 切到日本小盘股
+source scripts/switch_market.sh cn   # 切回官方默认(中国 CSI300)
+```
+必须用 `source` 执行(不能 `bash` 直接跑),因为要在当前 shell 设置环境变量。
+
+**还没做、依然留给以后的部分**:
+- 日股涨跌停不是固定比例,是阶梯表,现在的 `jp` 配置**没有模拟涨跌停**(直接不设这项),后续要接更真实的规则再补
+- `market:`/`benchmark:` 现在用的是占位方案(`all` + 一只随便挑的股票代码当基准),不是真正的 TOPIX 小盘指数
+- **RD-Agent 自动循环本身有个未解决的诡异 bug**:处理完新因子数据、正式开始回测之前,进程会被无声无息地终止,原因还没查到(不是内存不够、不是崩溃、不是多进程冲突,已逐一排除)。这个 bug 中国股票和日本股票都会碰到,不是数据源特有的,是 RD-Agent 自身的问题,下次要专门查
+- `.devcontainer/setup_env.sh` 目前只会下载中国股数据;日股数据的自动拉取还没接进去,需要手动照 `~/jquants/qlib_bridge/README.md` 的步骤重新灌
 
 ---
 
