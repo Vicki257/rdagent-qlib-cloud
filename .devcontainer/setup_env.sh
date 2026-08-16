@@ -48,6 +48,11 @@ echo "==> [4/6] 修正依赖版本漂移: pydantic-ai-slim"
 #   https://github.com/microsoft/RD-Agent/blob/main/requirements.txt
 python -m pip install "pydantic-ai-slim[mcp,openai,prefect]==1.66.0"
 
+echo "==> [4b/6] 修复 generate.py 已知 bug(选股池与取数窗口不对齐,详见文件内注释)"
+# 官方 issue,未修复: https://github.com/microsoft/RD-Agent/issues/619
+#                     https://github.com/microsoft/RD-Agent/issues/1002
+python3 "$(dirname "${BASH_SOURCE[0]}")/patch_generate_py.py"
+
 echo "==> [5/6] 固定 Qlib 数据目录 (容器销毁后数据仍在此路径)"
 mkdir -p "${HOME}/.qlib/qlib_data/cn_data"
 # 已知 issue microsoft/RD-Agent#794:容器内 /root/.qlib/qlib_data 被以 ro 挂载。
