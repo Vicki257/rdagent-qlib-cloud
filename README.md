@@ -170,14 +170,24 @@ http://localhost:19899
 
 ## 5. 以后换成 J-Quants 日股数据,要改哪里
 
-⚠️ **先说清楚我还没验证过的部分**:这次严格按你的要求"只验证官方闭环,不碰 J-Quants",所以下面这份清单是**根据代码结构推断出的改动点**,不是已经跑通验证过的方案。真正开始接 J-Quants 时,建议先重新确认 RD-Agent 的 `fin_factor` 场景对非中国市场(`region` 参数)的支持程度,这是我还没查证的地方。
+### 5a. 数据层(已验证,2026-08-16)
+
+**J-Quants 数据 → Qlib 格式这条技术链路已经跑通并验证过**:真实的日股小盘股数据(股票代码、金额等具体内容属于私有数据,**不放在这个公开仓库里**)已经转换成 Qlib `.bin` 格式,存在 Codespace 的 `~/.qlib/qlib_data/jp_smallcap`(独立路径,不影响这个仓库用的 `cn_data`),用 `D.features()` 查询过,数值正确,还拿一个真实因子(短期反转)算出过 Rank IC,数字合理。
+
+具体的转换脚本、数据字段映射、如何在新 Codespace 里重新灌入这份数据,记录在**另一个私有仓库**里(不公开,因为里面涉及具体数据处理方法论):`~/jquants/qlib_bridge/README.md`。
+
+### 5b. 接入 RD-Agent 场景层(还没做,下次会话的任务)
+
+⚠️ 数据层通了,不代表 RD-Agent 自动因子生成这一层通了——`fin_factor` 场景的配置模板和 LLM 场景描述,目前是**照着 A 股写死的**,证据(2026-08-16 实测查证,不是猜的):
+
+- `conf_baseline.yaml` 里硬编码 `market: csi300`、`benchmark: SH000300`、`provider_uri: ~/.qlib/qlib_data/cn_data`、`region: cn`,以及 A 股特有的涨跌停阈值(9.5%)
+- Qlib 官方 `region` 参数**只有 `REG_CN` 和 `REG_US` 两个预设**([官方文档](https://qlib.readthedocs.io/en/latest/start/initialization.html)),没有日本
 
 | 要改的文件 | 改什么 |
 |---|---|
-| `.devcontainer/setup_env.sh` | 第 `[6/6]` 步,把下载 `chenditc/investment_data` 的逻辑换成你的 J-Quants 数据处理管线,输出格式要转成 Qlib 的 `.bin` 格式(参考 Qlib 官方 `scripts/dump_bin.py`),存到一个新路径,比如 `~/.qlib/qlib_data/jp_data`,不要覆盖 `cn_data` |
-| `.devcontainer/devcontainer.json` 的 `remoteEnv` | 大概率需要加一个类似 `QLIB_PROVIDER_URI` 或场景配置指向 `jp_data` 而不是 `cn_data`——**具体变量名需要去查 RD-Agent 当时最新版 `fin_factor` 场景源码确认**,不要凭这份 README 里的旧信息猜 |
-| `.env.template` 里注释掉的 `QLIB_FACTOR_TRAIN_START/END` 等几行 | 训练/验证/测试的时间切分,要按日股的交易日历重新定 |
-| RD-Agent 因子场景的 prompt/scenario 描述文件(在 `rdagent/scenarios/qlib/` 下) | 官方默认场景描述是针对 A 股写的(比如涨跌停、T+1 这些 A 股特有规则),换日股需要检查这些假设是否还成立 |
+| `rdagent/scenarios/qlib/experiment/factor_template/conf_baseline.yaml`(和 `conf_combined_factors.yaml`) | `provider_uri` 指向 `jp_smallcap`;去掉 `region: cn`,手动配置(日股涨跌停不是固定比例,是阶梯表,第一版可以先不模拟);`market`/`benchmark` 换成日股小盘股票池和合适的基准 |
+| RD-Agent 因子场景的 prompt/scenario 描述文件(在 `rdagent/scenarios/qlib/` 下,**具体是哪个文件还没定位**) | 官方默认场景描述是针对 A 股写的,换日股需要检查这些假设是否还成立,不然 LLM 会带着"这是 A 股"的错误语境去生成因子 |
+| `.devcontainer/setup_env.sh` | 加一步:每次重建 Codespace,自动从私有仓库拉取/重建 `jp_smallcap` 数据(参考 `~/jquants/qlib_bridge/README.md` 的"从头恢复步骤") |
 
 ---
 
