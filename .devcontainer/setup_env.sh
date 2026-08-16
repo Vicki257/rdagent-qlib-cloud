@@ -48,6 +48,17 @@ echo "==> [4/6] 修正依赖版本漂移: pydantic-ai-slim"
 #   https://github.com/microsoft/RD-Agent/blob/main/requirements.txt
 python -m pip install "pydantic-ai-slim[mcp,openai,prefect]==1.66.0"
 
+# --- 另一个已知坑(2026-08-16 实测): RD-Agent 验证因子代码时会另外建一个
+#     conda 环境(rdagent4qlib),按官方 requirements.txt 里 scipy==1.11.4
+#     的要求装依赖。但 Qlib 回测阶段用到的 cvxpy 1.7.5 明确要求
+#     scipy>=1.13.0(eye_array 这个函数 scipy 1.12 才有),
+#     导致 qrun 跑到组合回测那一步必崩,报告文件生不出来,
+#     整轮实验被误判为失败。这个环境是 RD-Agent 运行时自己动态建的,
+#     不在这个脚本能提前干预的范围,写在这里只是留个记录 ——
+#     如果重新遇到 "cannot import name 'eye_array' from 'scipy.sparse'",
+#     去那个环境里手动跑:
+#       conda activate rdagent4qlib && pip install "scipy>=1.13.0"
+
 echo "==> [4b/6] 修复 generate.py 已知 bug(选股池与取数窗口不对齐,详见文件内注释)"
 # 官方 issue,未修复: https://github.com/microsoft/RD-Agent/issues/619
 #                     https://github.com/microsoft/RD-Agent/issues/1002
