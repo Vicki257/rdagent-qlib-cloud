@@ -17,6 +17,9 @@
 
 | 你想做什么 | 看第几节 |
 |---|---|
+| **跑一次普通实验(只要记这一条命令)** | [第 2 节](#2-怎么跑一次新实验) |
+| **搞懂 V2 的研究可信性层在管什么** | [第 0.5 节](#05-v2-研究可信性层2026-08-17) |
+| **在 Frozen Test 上做最终校验** | [第 0.5 节](#frozen-test--唯一能碰它的入口) |
 | 电脑重启/隔了几周,想接着用 | [第 1 节](#1-重启电脑后怎么恢复) |
 | 跑一次新实验 | [第 2 节](#2-怎么跑一次新实验) |
 | 打开 UI 看某一轮历史实验 | [第 3 节](#3-怎么打开-ui-看历史实验) |
@@ -24,6 +27,129 @@
 | 以后要换成 J-Quants 日股数据 | [第 5 节](#5-以后换成-j-quants-日股数据要改哪里) |
 | 自己验证"环境还在不在" | [第 6 节](#6-验证命令重启后自查) |
 | 每次新结果怎么写进知识地图 | [`knowledge_map/TEMPLATE.md`](knowledge_map/TEMPLATE.md) |
+
+---
+
+## 0.5 V2 研究可信性层(2026-08-17)
+
+到 V1 为止解决的是「能不能跑」。V2 解决的是**「跑出来的数字能不能信」**。
+
+### 新的流程
+
+```
+J-Quants / Qlib Data
+        ↓
+RD-Agent            提出假设 + 写因子       ← 负责「想」
+        ↓
+Qlib                计算实验结果            ← 负责「算」
+        ↓
+Validation Gate     独立判断结果能不能信      ← 负责「判断」(新增)
+        ↓
+    PASS / FAIL
+     ↓       ↓
+Candidate   失败原因 → RD-Agent 下一轮
+     ↓
+Frozen Test  (独立入口,RD-Agent 看不到)
+     ↓
+最终结论
+     ↓
+Knowledge Map       人理解学到了什么         ← 六视角,原样保留
+```
+
+**Validation Gate 不替代 knowledge_map,两者职责不同**:
+Gate 是机器判断「实验可不可信」,knowledge_map 是人理解「这次学到了什么」。
+顺序是:实验 → Gate → 拿到可信结果 → 再进 `knowledge_map/TEMPLATE.md` 的六视角。
+
+### 数据切成四段(单一真源:`validation/config.yaml`)
+
+| 段 | RD-Agent 能不能看 | JP 实际区间 | 交易日 |
+|---|---|---|---|
+| Train | ✅ 可反复用 | 2022-01-04 .. 2023-06-30 | 366 |
+| Validation | ✅ 可反复用 | 2023-07-03 .. 2023-12-29 | 124 |
+| Research OOS | ✅ 可反复用(就是 Qlib 配置里的 `test`) | 2024-01-04 .. 2024-12-30 | 245 |
+| **Frozen Test** | ❌ **看不到** | **2025-01-06 .. 2025-12-30** | **243** |
+
+CN 的四段见 `validation/config.yaml`(Frozen Test = `2022-08-02 .. 2026-08-14`,
+起点排在 2022-08-01 之后是因为官方模板的取数窗口到 2022-08-01,
+必须让 Frozen Test「从未被任何一轮加载过」这条性质在程序上成立)。
+
+日期全部来自实测,不是猜的。换数据以后 `health_check` 会检查 `config.yaml`
+里的 `data_available` 和真实日历是否一致,不一致直接 STOP。
+
+### Frozen Test —— 唯一能碰它的入口
+
+```bash
+bash scripts/run_frozen_test.sh EXP-0004
+```
+
+> **一旦 Frozen Test 被用于调参数、改因子、选择因子,它就不再是 Frozen Test。**
+
+这不是免责声明,是操作纪律。`run_frozen_test.py` 每次运行都会在
+`experiments/<EXP>/frozen_test/frozen_test.json` 里累加 `times_used`,
+就是为了让「这段被用过几次」留下痕迹 —— 用 1 次是最终校验,
+用 5 次说明它已经变成又一个被训练过的 test 集。
+
+**RD-Agent 看不到 Frozen Test,靠三层保证,不靠自觉**:
+
+1. **物理层(最硬)**:research 模式下 Qlib 配置里 `data_handler_config.end_time`
+   和 `backtest.end_time` 都止步于 Research OOS 末尾。Frozen 区间的数据
+   **根本没被加载进内存**,不是「加载了但不看」。
+2. **模式层**:两个 Qlib yaml 顶部有 `# RDAGENT_QLIB_CLOUD_MODE: research|frozen`
+   标记。`run_one_loop.sh` 开跑前强制 `research_check.py --require-mode research`,
+   frozen 模式下直接 ❌ STOP。
+3. **反馈层**:`run_frozen_test.sh` **不启动 RD-Agent**,只调 `qrun`,
+   结果只写 `experiments/`,不写 RD-Agent 的 `log/` 或 session 状态,
+   所以下一轮不可能把它当反馈读到。
+
+这三层都有对应的否定测试,见 `bash scripts/selftest_gates.sh`。
+
+### Validation Gate 检查什么
+
+`validation/validate.py`,读 Qlib 的真实结果,**全部确定性判定,不调用任何 LLM**。
+**PASS/FAIL 不由 RD-Agent 决定** —— 它自己的 `decision` 会被原样记录,但不参与判定。
+
+| Gate | 管什么 | 判定 |
+|---|---|---|
+| 1 数据/时间安全 | 段间重叠、切分越界、市场说明 vs `provider_uri`、因子源数据 vs 行情数据、标签是否只用未来价格、归一化窗口是否偷看未来、research 模式有没有伸进 frozen、patch 是否真生效 | 结构性错误 → **FAIL** |
+| 2 因子有没有信息 | IC / Rank IC / ICIR / Rank ICIR | 第一版只记录,不判定 |
+| 3 有没有增量价值 | baseline vs baseline+新因子:IC、Rank IC、年化、超额、IR、回撤、换手、成本 | Rank IC 无增量 → **FAIL** |
+| 4 稳定性 | 按年切片的收益 / Sharpe / 回撤;去掉贡献最大的那一年还剩不剩正收益 | 全靠单一年份 → **FAIL** |
+
+第一版**刻意不设** `IC > 0.03` 这类武断阈值。只有「一定是错」的才 FAIL,
+「好不好」交给人看 knowledge_map。原则:**宁可结果少,也不要产生假的量化结论。**
+
+Gate 3 判据用 **Rank IC** 而不是年化收益 —— 年化收益容易被少数右尾赢家支配
+(私有仓库的 TOPIX Small 实验实测过:分组平均收益和 Rank IC 可以指向相反方向)。
+
+**Gate 上线第一天就抓到一个真问题**:2026-08-16 那轮 RD-Agent 判定为「新 SOTA」
+的实验(`EXP-0004`),它自己看的是 IC(0.027387 → 0.030954,确实涨了),
+但 **Rank IC 其实是下降的**(0.039512 → **0.033299**),Rank ICIR 从
+0.332 掉到 0.254。Gate 3 判 FAIL。
+
+### 每轮自动存档(Codespace 删了也还在)
+
+`log/` 在容器里,删掉就没了。每轮结束自动抽出核心证据(几百 KB,不是几百 MB):
+
+```
+experiments/EXP-0001/
+    metadata.json        实验ID/时间/市场/数据范围/三段范围/因子名/Gate判定与失败原因/
+                         RD-Agent意见/下一步方向/frozen_test_used/已知缺陷/对应log路径
+    hypothesis.md        RD-Agent 提的假设 + 理由 + 因子任务和公式
+    factor.py            它写出来并跑通的因子代码,原样保存
+    config.yaml          Qlib 真正用的配置(含 provider_uri 和三段区间)
+    metrics.json         本轮指标 + 上一个 SOTA 指标 + token 花费 + 墙上时间
+    validation.json      Validation Gate 四组检查的完整结果
+    conclusion.md        RD-Agent 的判定/观察/下一步 + 关键指标对比表
+    backtest_curve.csv   逐日净值/换手/成本曲线
+```
+
+`experiments/INDEX.md` 是总索引,一行一个实验,**Gate 判定**和 RD-Agent 意见分两列。
+
+⚠️ **公开/私有分流**:这个仓库是 Public。日股产出是 J-Quants 授权数据的衍生物,
+按 `knowledge_map/AI交接手册.md` 的规定不进公开仓库。抽取器按每轮实际用的
+`provider_uri` 自动分流:`cn_data` → `experiments/`(进 Git);
+`jp_smallcap*` 或认不出来的 → `experiments_private/`(被 gitignore)。
+**漏判成私有只是麻烦,漏判成公开是泄露**,所以默认按最保守处理。
 
 ---
 
@@ -95,13 +221,34 @@ gh codespace ssh -c <CODESPACE_NAME> -- 'bash -lc "cd /workspaces/rdagent-qlib-c
 
 ## 2. 怎么跑一次新实验
 
-先确认 Codespace 名字(见上一节 `gh codespace list`),然后:
+**只需要记这一条命令**(先选好市场,`jp` 或 `cn`):
 
 ```bash
-gh codespace ssh -c <CODESPACE_NAME> -- 'bash -lc "cd /workspaces/rdagent-qlib-cloud && export BACKEND=rdagent.oai.backend.LiteLLMAPIBackend && export MLFLOW_ALLOW_FILE_STORE=true && bash scripts/run_one_loop.sh 1"'
+gh codespace ssh -c <CODESPACE_NAME> -- 'bash -lc "cd /workspaces/rdagent-qlib-cloud && source scripts/switch_market.sh jp && bash scripts/run_one_loop.sh"'
 ```
 
-这会跑 **1 个 loop**(提出因子→写代码→Qlib 训练验证→出结果→反馈)。实测单个 loop 大约 **9-10 分钟**,DeepSeek 花费约 **$0.02 以内**。
+`run_one_loop.sh` 现在自己会做完整四步,不用你再记别的命令:
+
+```
+[1/4] 研究环境体检      配置错位 → ❌ STOP,不让你带着假配置跑
+                        并强制 research 模式(碰不到 Frozen Test)
+[2/4] 跑 RD-Agent       提假设 → 写因子 → Qlib 训练回测
+[3/4] Validation Gate   独立判断能不能信 → PASS / FAIL
+[4/4] 抽核心证据存档     写进 experiments/EXP-NNNN/
+```
+
+第 3、4 步挂在 `trap EXIT` 上,所以**即使 RD-Agent 中途卡死**(已知 bug,见下面),
+这一轮的假设、代码、失败原因也会被存档,不会跑挂了就什么都没留下。
+
+跑多轮把轮数当参数传:`bash scripts/run_one_loop.sh 5`。
+实测单个 loop 约 **9-10 分钟**,DeepSeek 花费约 **$0.02 以内**。
+
+跑完看结果:
+
+```bash
+cat experiments/INDEX.md                    # 全部历史实验一览(含 Gate 判定)
+cat experiments/EXP-0005/metadata.json      # 某一轮测了什么、通过没通过、为什么
+```
 
 要连续跑多轮(比如 5 轮),把最后的 `1` 换成想要的轮数:
 
@@ -200,11 +347,59 @@ source scripts/switch_market.sh cn   # 切回官方默认(中国 CSI300)
 ```
 必须用 `source` 执行(不能 `bash` 直接跑),因为要在当前 shell 设置环境变量。
 
-**还没做、依然留给以后的部分**:
-- 日股涨跌停不是固定比例,是阶梯表,现在的 `jp` 配置**没有模拟涨跌停**(直接不设这项),后续要接更真实的规则再补
-- `market:`/`benchmark:` 现在用的是占位方案(`all` + 一只随便挑的股票代码当基准),不是真正的 TOPIX 小盘指数
-- **RD-Agent 自动循环本身有个未解决的诡异 bug**:处理完新因子数据、正式开始回测之前,进程会被无声无息地终止,原因还没查到(不是内存不够、不是崩溃、不是多进程冲突,已逐一排除)。这个 bug 中国股票和日本股票都会碰到,不是数据源特有的,是 RD-Agent 自身的问题,下次要专门查
-- `.devcontainer/setup_env.sh` 目前只会下载中国股数据;日股数据的自动拉取还没接进去,需要手动照 `~/jquants/qlib_bridge/README.md` 的步骤重新灌
+### 5c. 2026-08-17 发现:JP 那条线之前**从来没跑出过有意义的数字**
+
+V2 改造过程中查出两个会**静默产生假数字**的错配。两个都不报错、都会给出漂亮的
+指标,只是指标没有意义 —— 这也正是为什么需要一个独立的可信性层。
+
+**错配 1:`switch_market.sh` 只换了 provider_uri 一行。**
+老版本就一句 `sed -i 's|~/.qlib/qlib_data/[a-z_0-9]*"|...jp_smallcap_300"|'`。
+结果 JP 模式下 Qlib 实际拿到的是:
+
+| 字段 | 实际值 | 问题 |
+|---|---|---|
+| `provider_uri` | `jp_smallcap_300` | ✅ 换了 |
+| `market` | `csi300` | ❌ JP 数据目录里只有 `all.txt`,没有 `csi300.txt` |
+| `benchmark` | `SH000300` | ❌ JP 数据里没有这个指数 |
+| `segments` | train 2008-2014 / valid 2015-2016 / test 2017-2020 | ❌ **JP 数据 2022-01-04 才开始,三段全在数据存在之前** |
+| `limit_threshold` | `0.095` | ❌ A 股涨跌停 |
+
+更糟的是:`patch_market_switch.py` 把「讲给 LLM 听的说明文字」改成读环境变量、
+显示成 2022-2023,而 yaml 里的日期还是 2008-2014 —— **修好了文字,没修 yaml**,
+反而把错位藏得更深。
+
+**修法**:所有市场字段统一由 `validation/config.yaml` 定义,
+`scripts/apply_market_config.py` 一次性全部写进去,不可能只改一半。
+`switch_market.sh` 现在只是这个脚本的薄封装。
+
+**错配 2:因子源数据和行情数据不是同一个市场。**
+RD-Agent 把 Qlib 行情导出成
+`git_ignore_folder/factor_implementation_source_data/daily_pv.h5`,
+因子代码全部基于它计算。**这个文件会被缓存,切 provider 之后不会自动重新生成。**
+实测当时的状态:
+
+```
+daily_pv.h5    6075 只股票, 2008-12-29 .. 2026-08-14   ← A 股
+provider_uri   jp_smallcap_300, 300 只, 2022-01-04 ..  ← 日股
+股票代码重叠   0 只（0.0%）
+```
+
+也就是「因子在 A 股数据上算,回测在日股数据上跑」,合并后基本全是 NaN,但不报错。
+**修法**:Gate 1 现在会算这个重叠率,低于 50% 直接 FAIL,并给出
+「删掉 `factor_implementation_source_data/` 让它按当前 provider 重新生成」的指示。
+
+### 5d. JP 回测**还剩**哪些未解决的问题(不要当已经解决)
+
+| 问题 | 状态 | 已经做了什么 |
+|---|---|---|
+| **股票池不是时点正确的** | ❌ 未解决 | 实测 `instruments/all.txt` 里 300 只有 291 只起始日统一是数据起点 2022-01-04,没有任何一只带「晚于起点才进入股票池」的记录 → 这是「2022-2025 任意月末属于 TOPIX Small 1/2 的并集」,不是逐月成分股。2024 年才被降级进 Small 的股票在 2022 年就已经在池子里。**退市侧是好的**(25/300 有提前结束日期,退市股票会自然消失),**进入侧有前视偏差**。已在 `validation/config.yaml` 显式标记 `point_in_time_universe: false` / `universe_membership_lookahead: true`,并且这个标记会跟着写进每一条 `experiments/*/metadata.json` 的 `known_risks`,**不会出现「数字记住了、前提忘了」**。严谨做法的代码已存在于私有仓库,但还没接进 `.bin` 生成流程。参考量级:私有仓库实测简化并集 + 无流动性过滤的信号强度只有严谨版的 **39%**(Rank IC 0.0113 vs 0.0292)。 |
+| **benchmark** | ✅ 已解决 | 不再用「随便找一只股票」。改成**等权市场组合**:Qlib 原生支持 `benchmark` 传 list,语义是「列表内股票的日均涨跌」(`qlib/backtest/report.py` 第 62-64 行),明确、可重复计算。`apply_market_config.py` 会把它展开成显式的 300 个代码写进 yaml,所以翻旧实验时基准是什么一目了然。Gate 1 还会检查 benchmark 不是「池子里的一只普通成分股」(那就是被禁止的占位做法)。 |
+| **`market: all`** | ✅ 已解决 | JP 数据目录里确实只有 `all.txt`,`all` 是正确值而不是占位。Gate 1 会检查 `market` 对应的 `instruments/<market>.txt` 真的存在。 |
+| **涨跌停没模拟** | ❌ 未解决 | 日本涨跌停是按股价区间的**阶梯绝对值表**,不是固定比例,Qlib 的单一 `limit_threshold` 表达不了。现在显式**不设**这一项(而不是留一个错的比例值),并标记 `price_limit_simulation: false`。 |
+| **没有流动性过滤** | ❌ 未解决 | 这份 `.bin` 没套任何最小成交额门槛。私有仓库实测:去掉 3000 万日元/日的中位成交额门槛后,同一个因子的多空毛年化从 **+2.78% 掉到 −2.96%** —— 被门槛挡掉的股票只贡献噪声和成本。已标记 `liquidity_filter: false`。 |
+| **分时段 IC 拿不到** | ❌ 未解决 | RD-Agent 在 Docker 容器里跑 `qrun`,只把汇总指标和回测曲线带出来,**没有持久化逐日预测值**(`pred.pkl` / `mlruns`)。所以 Gate 2 的「分时段 IC」显式报「不可得」并说明原因,**没有用别的东西糊弄成 IC**。Gate 4 的分年收益/Sharpe/回撤来自真实回测曲线,那部分是实数据。 |
+| **RD-Agent 循环偶发卡死** | ❌ 未解决 | 处理完新因子数据、正式开始回测之前进程会被无声终止,原因还没查到(不是内存不够、不是崩溃、不是多进程冲突,已逐一排除)。CN / JP 都会碰到,是 RD-Agent 自身问题。**缓解**:`run_one_loop.sh` 把 Gate 和存档挂在 `trap EXIT` 上,卡死也会留下假设/代码/失败原因。 |
+| **日股数据自动拉取** | ❌ 未解决 | `.devcontainer/setup_env.sh` 只会下载中国股数据;日股要手动照 `~/jquants/qlib_bridge/README.md` 的步骤灌。 |
 
 ---
 
