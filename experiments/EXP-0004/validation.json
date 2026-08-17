@@ -1,0 +1,436 @@
+{
+  "status": "FAIL",
+  "reasons": [
+    "Gate3 新因子没有带来增量信息：Rank IC 0.039512 → 0.033299（Δ=-0.006213，需要 ≥ 0.0005）。新因子自己看起来漂不漂亮不重要，加进现有模型有没有新信息才重要。"
+  ],
+  "warnings": [
+    "Gate1 该轮配置带市场标记：该轮的 config 没有 RDAGENT_QLIB_CLOUD_MARKET 标记（2026-08-17 引入 apply_market_config.py 之前跑的实验都没有）。从 provider_uri 推断市场为 cn。",
+    "Gate1（当前环境，不参与本轮判定）RD_AGENT_MARKET_NAME 已设置：环境变量 RD_AGENT_MARKET_NAME 没设。CN 用官方默认文字尚可接受，但 JP 模式下 RD-Agent 会拿默认的 'CSI300 / 2008-2020' 去描述日股数据。用 `source scripts/switch_market.sh <cn|jp>` 设置（必须 source）。",
+    "Gate2 分时段 IC 不可得（RD-Agent 未持久化逐日预测值），只有整体 IC"
+  ],
+  "metrics": {
+    "gate1_data_safety": {
+      "verdict_source": "该轮自己记录的 config",
+      "recorded": {
+        "market": "cn",
+        "mode": "research",
+        "provider_uri": "~/.qlib/qlib_data/cn_data",
+        "qlib_market": "csi300",
+        "benchmark": "SH000300",
+        "train": [
+          "2008-01-01",
+          "2014-12-31"
+        ],
+        "valid": [
+          "2015-01-01",
+          "2016-12-31"
+        ],
+        "test": [
+          "2017-01-01",
+          "2020-08-01"
+        ],
+        "handler_range": [
+          "2008-01-01",
+          "2022-08-01"
+        ],
+        "backtest_range": [
+          "2017-01-01",
+          "2020-08-01"
+        ],
+        "limit_threshold": "0.095",
+        "frozen_test_used": false,
+        "known_risks": {},
+        "config_split_reference": {
+          "train": [
+            "2008-01-01",
+            "2014-12-31"
+          ],
+          "validation": [
+            "2015-01-01",
+            "2016-12-31"
+          ],
+          "research_oos": [
+            "2017-01-01",
+            "2020-08-01"
+          ],
+          "frozen_test": [
+            "2022-08-02",
+            "2026-08-14"
+          ]
+        }
+      },
+      "checks": [
+        {
+          "name": "该轮配置带市场标记",
+          "status": "warn",
+          "detail": "该轮的 config 没有 RDAGENT_QLIB_CLOUD_MARKET 标记（2026-08-17 引入 apply_market_config.py 之前跑的实验都没有）。从 provider_uri 推断市场为 cn。"
+        },
+        {
+          "name": "Train / Validation / Research OOS / Frozen Test 互不重叠",
+          "status": "ok",
+          "detail": "四段严格递增、无重叠"
+        },
+        {
+          "name": "切分不越出数据实际范围",
+          "status": "ok",
+          "detail": "全部落在 2000-01-04..2026-08-14 内"
+        },
+        {
+          "name": "生效的 test 段 == research_oos",
+          "status": "ok",
+          "detail": "test=['2017-01-01', '2020-08-01'] 期望=['2017-01-01', '2020-08-01']"
+        },
+        {
+          "name": "research 模式下取数窗口止步于 Frozen Test 之前",
+          "status": "ok",
+          "detail": "取数止于 2022-08-01，Frozen Test 从 2022-08-02 起，Qlib 根本不会加载那段数据"
+        },
+        {
+          "name": "标签只用未来价格",
+          "status": "ok",
+          "detail": "1 个标签表达式的 Ref 偏移全为负（严格未来）"
+        },
+        {
+          "name": "该轮 benchmark 是明确可重复的",
+          "status": "ok",
+          "detail": "真实指数 SH000300"
+        }
+      ],
+      "environment_now": {
+        "environment": {
+          "mode": "research",
+          "market": "jp",
+          "display_name": "JP Small-Cap (TOPIX Small 1/2, 300只精简版)",
+          "provider_uri": "~/.qlib/qlib_data/jp_smallcap_300",
+          "qlib_market": "all",
+          "region": "cn",
+          "benchmark": "equal_weight_universe(300只)",
+          "train": [
+            "2022-01-04",
+            "2023-06-30"
+          ],
+          "validation": [
+            "2023-07-03",
+            "2023-12-29"
+          ],
+          "research_oos": [
+            "2024-01-04",
+            "2024-12-30"
+          ],
+          "frozen_test": [
+            "2025-01-06",
+            "2025-12-30"
+          ],
+          "active_test_segment": [
+            "2024-01-04",
+            "2024-12-30"
+          ],
+          "frozen_test_used": false,
+          "limit_threshold": null,
+          "known_risks": {
+            "point_in_time_universe": false,
+            "universe_membership_lookahead": true,
+            "universe_note": "股票池 = 2022-2025 期间任意月末属于 TOPIX Small 1/2 的并集（300 只精简版）。 退市侧正确（25/300 有提前结束日期），进入侧有前视偏差（291/300 起始日 统一为数据起点 2022-01-04）。严谨做法是逐月用 J-Quants master_month_end 快照重建，代码已存在于私有仓库 ~/jquants/每日横截面短期反转因子/src/jquants_reversal/experiment.py 的 prepare_experiment_data()，但还没有接进这份 .bin 数据的生成流程。 参考量级：私有仓库实测「简化并集 + 无流动性过滤」的信号强度只有 严谨版的 39%（Rank IC 0.0113 vs 0.0292）。",
+            "price_limit_simulation": false,
+            "price_limit_note": "日本涨跌停是按股价区间的阶梯绝对值表，不是固定比例，Qlib 的 limit_threshold 表达不了，因此这次不模拟涨跌停。",
+            "liquidity_filter": false,
+            "liquidity_filter_note": "这份 .bin 数据没有套用任何最小成交额门槛。私有仓库实测：去掉 3000 万日元/日的中位成交额门槛后，同一个因子的多空毛年化从 +2.78% 掉到 -2.96%，即被门槛挡掉的股票只贡献噪声和成本。"
+          },
+          "provider_facts": {
+            "root": "/home/vscode/.qlib/qlib_data/jp_smallcap_300",
+            "exists": true,
+            "calendar_days": 978,
+            "calendar_start": "2022-01-04",
+            "calendar_end": "2025-12-30",
+            "instrument_files": [
+              "all.txt"
+            ],
+            "instrument_count": 300,
+            "instruments_with_late_start": 9,
+            "instruments_with_early_end": 25
+          }
+        },
+        "checks": [
+          {
+            "name": "两个 yaml 的模式/市场一致",
+            "status": "ok",
+            "detail": "mode=research market=jp"
+          },
+          {
+            "name": "市场说明 vs provider_uri",
+            "status": "ok",
+            "detail": "都是 jp（~/.qlib/qlib_data/jp_smallcap_300）"
+          },
+          {
+            "name": "RD_AGENT_MARKET_NAME 已设置",
+            "status": "fail",
+            "detail": "环境变量 RD_AGENT_MARKET_NAME 没设。CN 用官方默认文字尚可接受，但 JP 模式下 RD-Agent 会拿默认的 'CSI300 / 2008-2020' 去描述日股数据。用 `source scripts/switch_market.sh <cn|jp>` 设置（必须 source）。"
+          },
+          {
+            "name": "Qlib 数据目录存在",
+            "status": "ok",
+            "detail": "/home/vscode/.qlib/qlib_data/jp_smallcap_300：300 只股票，978 个交易日 2022-01-04 .. 2025-12-30"
+          },
+          {
+            "name": "market 对应的 instruments 文件存在",
+            "status": "ok",
+            "detail": "all.txt"
+          },
+          {
+            "name": "config.yaml 的 data_available 与实测日历一致",
+            "status": "ok",
+            "detail": "['2022-01-04', '2025-12-30']"
+          },
+          {
+            "name": "benchmark 可解析",
+            "status": "ok",
+            "detail": "等权市场组合，300 只成分（Qlib 对 list 的语义是「列表内股票的日均涨跌」，可重复计算，不是随便挑的一只股票）"
+          },
+          {
+            "name": "Train / Validation / Research OOS / Frozen Test 互不重叠",
+            "status": "ok",
+            "detail": "四段严格递增、无重叠"
+          },
+          {
+            "name": "切分不越出数据实际范围",
+            "status": "ok",
+            "detail": "全部落在 2022-01-04..2025-12-30 内"
+          },
+          {
+            "name": "归一化拟合窗口 == train",
+            "status": "ok",
+            "detail": "fit=['2022-01-04', '2023-06-30'] train=['2022-01-04', '2023-06-30']"
+          },
+          {
+            "name": "生效的 test 段 == research_oos",
+            "status": "ok",
+            "detail": "test=['2024-01-04', '2024-12-30'] 期望=['2024-01-04', '2024-12-30']"
+          },
+          {
+            "name": "research 模式下取数窗口止步于 Frozen Test 之前",
+            "status": "ok",
+            "detail": "取数止于 2024-12-30，Frozen Test 从 2025-01-06 起，Qlib 根本不会加载那段数据"
+          },
+          {
+            "name": "标签只用未来价格",
+            "status": "ok",
+            "detail": "1 个标签表达式的 Ref 偏移全为负（严格未来）"
+          },
+          {
+            "name": "因子源数据与 provider_uri 同市场",
+            "status": "ok",
+            "detail": "daily_pv.h5 还不存在（RD-Agent 第一次跑时会生成），无需检查"
+          },
+          {
+            "name": "patch_market_switch(prompts.yaml)",
+            "status": "ok",
+            "detail": "patch 已生效"
+          },
+          {
+            "name": "patch_market_switch(factor_experiment.py)",
+            "status": "ok",
+            "detail": "patch 已生效"
+          },
+          {
+            "name": "patch_generate_py(generate.py)",
+            "status": "ok",
+            "detail": "patch 已生效"
+          }
+        ]
+      },
+      "n_failed": 0
+    },
+    "gate2_factor_information": {
+      "IC": 0.0309537364369161,
+      "Rank IC": 0.0332994377985651,
+      "ICIR": 0.2389376117524489,
+      "Rank ICIR": 0.2539845496939504,
+      "ic_stability_note": "ICIR / Rank ICIR 就是 IC 的稳定性指标（IC 均值 ÷ IC 标准差），Qlib 直接输出。",
+      "ic_by_period": null,
+      "ic_by_period_unavailable_reason": "RD-Agent 只把 qrun 的汇总指标和回测曲线带出容器，没有持久化逐日预测值（pred.pkl / mlruns），因此分时段 IC 无法计算。Gate 4 用回测曲线做了分年的收益/Sharpe/回撤切片，那部分是真实数据。要补分时段 IC，需要先改让 qrun 把 mlruns 目录拷出容器 —— 属于未解决项，没有伪造。"
+    },
+    "gate3_incremental_value": {
+      "comparison": {
+        "IC": {
+          "baseline": 0.0273869360716579,
+          "with_new_factor": 0.0309537364369161,
+          "delta": 0.0035668003652582006
+        },
+        "Rank IC": {
+          "baseline": 0.0395124938682339,
+          "with_new_factor": 0.0332994377985651,
+          "delta": -0.0062130560696688
+        },
+        "ICIR": {
+          "baseline": 0.226749536908216,
+          "with_new_factor": 0.2389376117524489,
+          "delta": 0.012188074844232899
+        },
+        "Rank ICIR": {
+          "baseline": 0.3323972623038958,
+          "with_new_factor": 0.2539845496939504,
+          "delta": -0.07841271260994542
+        },
+        "1day.excess_return_without_cost.annualized_return": {
+          "baseline": 0.076217791943001,
+          "with_new_factor": 0.108063875664373,
+          "delta": 0.031846083721372
+        },
+        "1day.excess_return_with_cost.annualized_return": {
+          "baseline": 0.0378268171615876,
+          "with_new_factor": 0.0634561205444637,
+          "delta": 0.025629303382876098
+        },
+        "1day.excess_return_with_cost.information_ratio": {
+          "baseline": 0.5262161429566715,
+          "with_new_factor": 0.6752811674319278,
+          "delta": 0.14906502447525627
+        },
+        "1day.excess_return_with_cost.max_drawdown": {
+          "baseline": -0.0849295105364286,
+          "with_new_factor": -0.1364135552939736,
+          "delta": -0.05148404475754499
+        }
+      },
+      "execution": {
+        "baseline": {
+          "mean_daily_turnover": 0.16179465908121846,
+          "total_turnover": 17075864145.920204,
+          "mean_daily_cost": 0.00016130661672862805,
+          "total_cost": 17034814.32036597
+        },
+        "with_new_factor": {
+          "mean_daily_turnover": 0.1878895144042595,
+          "total_turnover": 20529444263.806038,
+          "mean_daily_cost": 0.00018742754252062732,
+          "total_cost": 20491766.31416048
+        }
+      },
+      "rank_ic_delta": -0.0062130560696688,
+      "rank_ic_threshold": 0.0005
+    },
+    "gate4_stability": {
+      "slice_by": "year",
+      "slices": {
+        "2017": {
+          "days": 244,
+          "annualized_return": 0.42959998085184514,
+          "annualized_vol": 0.13762823265253699,
+          "sharpe": 2.5986544973741643,
+          "max_drawdown": -0.0648521033674887,
+          "cumulative_return": 0.40065490147827587,
+          "excess_cumulative_return": 0.1510564516434889,
+          "excess_annualized_return": 0.16058948138248463
+        },
+        "2018": {
+          "days": 243,
+          "annualized_return": -0.21617084836054,
+          "annualized_vol": 0.23911940902686657,
+          "sharpe": -1.0180960830948655,
+          "max_drawdown": -0.2807595882381976,
+          "cumulative_return": -0.23078846500797334,
+          "excess_cumulative_return": 0.030716249931862505,
+          "excess_annualized_return": 0.03674061759737124
+        },
+        "2019": {
+          "days": 244,
+          "annualized_return": 0.585331675439067,
+          "annualized_vol": 0.23660058714265564,
+          "sharpe": 1.9493408621514443,
+          "max_drawdown": -0.18365926242680586,
+          "cumulative_return": 0.5207961388906346,
+          "excess_cumulative_return": 0.12177039732278394,
+          "excess_annualized_return": 0.13123021466985785
+        },
+        "2020": {
+          "days": 140,
+          "annualized_return": 0.5760383808653453,
+          "annualized_vol": 0.32244119197238275,
+          "sharpe": 1.412118588612906,
+          "max_drawdown": -0.17316233172558493,
+          "cumulative_return": 0.25068846644400433,
+          "excess_cumulative_return": 0.0979094105494136,
+          "excess_annualized_return": 0.19073759234591758
+        }
+      },
+      "overall": {
+        "days": 871,
+        "annualized_return": 0.26434337394185126,
+        "annualized_vol": 0.23194927368048426,
+        "sharpe": 1.0116958008459436,
+        "max_drawdown": -0.2969979510504577,
+        "cumulative_return": 1.0492600789390472,
+        "excess_cumulative_return": 0.461188444894145,
+        "excess_annualized_return": 0.1211944674070693
+      },
+      "ic_by_slice": null,
+      "ic_by_slice_unavailable_reason": "分时段 IC 需要逐日预测值，RD-Agent 没有持久化（见 Gate 2）。这里的收益 / Sharpe / 回撤切片来自真实回测曲线。",
+      "contribution_by_slice": {
+        "2017": 0.40065490147827587,
+        "2018": -0.23078846500797334,
+        "2019": 0.5207961388906346,
+        "2020": 0.25068846644400433
+      },
+      "largest_contributor": "2019",
+      "sum_all_slices": 0.9413510418049414,
+      "sum_excluding_largest": 0.42055490291430686,
+      "positive_slice_share": 0.75
+    },
+    "qlib_metrics": {
+      "with_new_factor": {
+        "1day.ffr": 1.0,
+        "1day.excess_return_without_cost.annualized_return": 0.108063875664373,
+        "1day.excess_return_without_cost.max_drawdown": -0.116222095152431,
+        "1day.excess_return_with_cost.max_drawdown": -0.1364135552939736,
+        "l2.train": 0.975975163405969,
+        "1day.excess_return_with_cost.mean": 0.0002666223552288,
+        "1day.excess_return_with_cost.std": 0.0060911655178422,
+        "1day.excess_return_without_cost.mean": 0.0004540498977494,
+        "ICIR": 0.2389376117524489,
+        "1day.excess_return_without_cost.information_ratio": 1.1495758607822266,
+        "1day.pos": 0.0,
+        "1day.excess_return_with_cost.information_ratio": 0.6752811674319278,
+        "Rank IC": 0.0332994377985651,
+        "1day.excess_return_without_cost.std": 0.0060933261541749,
+        "1day.pa": 0.0,
+        "l2.valid": 0.995482899631054,
+        "1day.excess_return_with_cost.annualized_return": 0.0634561205444637,
+        "Rank ICIR": 0.2539845496939504,
+        "IC": 0.0309537364369161
+      },
+      "baseline": {
+        "1day.ffr": 1.0,
+        "1day.excess_return_without_cost.annualized_return": 0.076217791943001,
+        "1day.excess_return_without_cost.max_drawdown": -0.0768565915492808,
+        "1day.excess_return_with_cost.max_drawdown": -0.0849295105364286,
+        "l2.train": 0.9751586629288868,
+        "1day.excess_return_with_cost.mean": 0.0001589362065612,
+        "1day.excess_return_with_cost.std": 0.004659584101031,
+        "1day.excess_return_without_cost.mean": 0.0003202428232899,
+        "ICIR": 0.226749536908216,
+        "1day.excess_return_without_cost.information_ratio": 1.059931356375885,
+        "1day.pos": 0.0,
+        "1day.excess_return_with_cost.information_ratio": 0.5262161429566715,
+        "Rank IC": 0.0395124938682339,
+        "1day.excess_return_without_cost.std": 0.0046611184999094,
+        "1day.pa": 0.0,
+        "l2.valid": 0.9942676267818488,
+        "1day.excess_return_with_cost.annualized_return": 0.0378268171615876,
+        "Rank ICIR": 0.3323972623038958,
+        "IC": 0.0273869360716579
+      }
+    },
+    "rdagent_own_opinion": {
+      "decision": true,
+      "note": "RD-Agent 自己的判定，仅供参考，不参与 Validation Gate 的 PASS/FAIL。"
+    }
+  },
+  "log_dir": "log/2026-08-16_06-35-38-526479",
+  "loop": "Loop_0",
+  "market": "cn",
+  "mode": "research",
+  "frozen_test_used": false,
+  "known_risks": {},
+  "validated_utc": "2026-08-17T11:06:28+00:00",
+  "validator_version": 1
+}

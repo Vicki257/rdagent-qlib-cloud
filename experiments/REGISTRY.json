@@ -1,0 +1,114 @@
+{
+  "next_id": 6,
+  "entries": {
+    "EXP-0001": {
+      "experiment_id": "EXP-0001",
+      "registry_key": "2026-08-16_06-01-55-220033/Loop_0",
+      "market": "unknown",
+      "public": false,
+      "status": "partial",
+      "missing_artifacts": [
+        "running/runner result",
+        "running/Quantitative Backtesting Chart",
+        "feedback/feedback"
+      ],
+      "decision": null,
+      "validation_status": "NOT_VALIDATED",
+      "frozen_test_used": false,
+      "source_log_dir": "log/2026-08-16_06-01-55-220033/Loop_0",
+      "extracted_utc": "2026-08-17T11:06:33+00:00",
+      "summary": {
+        "IC": null,
+        "Rank IC": null,
+        "1day.excess_return_with_cost.annualized_return": null,
+        "1day.excess_return_with_cost.max_drawdown": null
+      }
+    },
+    "EXP-0002": {
+      "experiment_id": "EXP-0002",
+      "registry_key": "2026-08-16_06-21-09-978261/Loop_0",
+      "market": "unknown",
+      "public": false,
+      "status": "partial",
+      "missing_artifacts": [
+        "running/runner result",
+        "running/Quantitative Backtesting Chart"
+      ],
+      "decision": false,
+      "validation_status": "FAIL",
+      "frozen_test_used": false,
+      "source_log_dir": "log/2026-08-16_06-21-09-978261/Loop_0",
+      "extracted_utc": "2026-08-17T11:06:33+00:00",
+      "summary": {
+        "IC": null,
+        "Rank IC": null,
+        "1day.excess_return_with_cost.annualized_return": null,
+        "1day.excess_return_with_cost.max_drawdown": null
+      }
+    },
+    "EXP-0003": {
+      "experiment_id": "EXP-0003",
+      "registry_key": "2026-08-16_06-26-16-989174/Loop_0",
+      "market": "unknown",
+      "public": false,
+      "status": "partial",
+      "missing_artifacts": [
+        "running/runner result",
+        "running/Quantitative Backtesting Chart"
+      ],
+      "decision": false,
+      "validation_status": "NOT_VALIDATED",
+      "frozen_test_used": false,
+      "source_log_dir": "log/2026-08-16_06-26-16-989174/Loop_0",
+      "extracted_utc": "2026-08-17T11:06:33+00:00",
+      "summary": {
+        "IC": null,
+        "Rank IC": null,
+        "1day.excess_return_with_cost.annualized_return": null,
+        "1day.excess_return_with_cost.max_drawdown": null
+      }
+    },
+    "EXP-0004": {
+      "experiment_id": "EXP-0004",
+      "registry_key": "2026-08-16_06-35-38-526479/Loop_0",
+      "market": "cn",
+      "public": true,
+      "status": "complete",
+      "missing_artifacts": [],
+      "decision": true,
+      "validation_status": "FAIL",
+      "frozen_test_used": false,
+      "source_log_dir": "log/2026-08-16_06-35-38-526479/Loop_0",
+      "extracted_utc": "2026-08-17T11:06:33+00:00",
+      "summary": {
+        "IC": 0.0309537364369161,
+        "Rank IC": 0.0332994377985651,
+        "1day.excess_return_with_cost.annualized_return": 0.0634561205444637,
+        "1day.excess_return_with_cost.max_drawdown": -0.1364135552939736
+      }
+    },
+    "EXP-0005": {
+      "experiment_id": "EXP-0005",
+      "registry_key": "2026-08-16_10-43-33-152906/Loop_0",
+      "market": "unknown",
+      "public": false,
+      "status": "partial",
+      "missing_artifacts": [
+        "running/runner result",
+        "running/Quantitative Backtesting Chart",
+        "feedback/feedback"
+      ],
+      "decision": null,
+      "validation_status": "NOT_VALIDATED",
+      "frozen_test_used": false,
+      "source_log_dir": "log/2026-08-16_10-43-33-152906/Loop_0",
+      "extracted_utc": "2026-08-17T11:06:33+00:00",
+      "summary": {
+        "IC": null,
+        "Rank IC": null,
+        "1day.excess_return_with_cost.annualized_return": null,
+        "1day.excess_return_with_cost.max_drawdown": null
+      }
+    }
+  }
+}

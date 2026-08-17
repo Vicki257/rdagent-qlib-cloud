@@ -1,0 +1,66 @@
+{
+  "experiment_id": "EXP-0004",
+  "market": "cn",
+  "this_loop": {
+    "1day.ffr": 1.0,
+    "1day.excess_return_without_cost.annualized_return": 0.108063875664373,
+    "1day.excess_return_without_cost.max_drawdown": -0.116222095152431,
+    "1day.excess_return_with_cost.max_drawdown": -0.1364135552939736,
+    "l2.train": 0.975975163405969,
+    "1day.excess_return_with_cost.mean": 0.0002666223552288,
+    "1day.excess_return_with_cost.std": 0.0060911655178422,
+    "1day.excess_return_without_cost.mean": 0.0004540498977494,
+    "ICIR": 0.2389376117524489,
+    "1day.excess_return_without_cost.information_ratio": 1.1495758607822266,
+    "1day.pos": 0.0,
+    "1day.excess_return_with_cost.information_ratio": 0.6752811674319278,
+    "Rank IC": 0.0332994377985651,
+    "1day.excess_return_without_cost.std": 0.0060933261541749,
+    "1day.pa": 0.0,
+    "l2.valid": 0.995482899631054,
+    "1day.excess_return_with_cost.annualized_return": 0.0634561205444637,
+    "Rank ICIR": 0.2539845496939504,
+    "IC": 0.0309537364369161
+  },
+  "previous_sota": {
+    "1day.ffr": 1.0,
+    "1day.excess_return_without_cost.annualized_return": 0.076217791943001,
+    "1day.excess_return_without_cost.max_drawdown": -0.0768565915492808,
+    "1day.excess_return_with_cost.max_drawdown": -0.0849295105364286,
+    "l2.train": 0.9751586629288868,
+    "1day.excess_return_with_cost.mean": 0.0001589362065612,
+    "1day.excess_return_with_cost.std": 0.004659584101031,
+    "1day.excess_return_without_cost.mean": 0.0003202428232899,
+    "ICIR": 0.226749536908216,
+    "1day.excess_return_without_cost.information_ratio": 1.059931356375885,
+    "1day.pos": 0.0,
+    "1day.excess_return_with_cost.information_ratio": 0.5262161429566715,
+    "Rank IC": 0.0395124938682339,
+    "1day.excess_return_without_cost.std": 0.0046611184999094,
+    "1day.pa": 0.0,
+    "l2.valid": 0.9942676267818488,
+    "1day.excess_return_with_cost.annualized_return": 0.0378268171615876,
+    "Rank ICIR": 0.3323972623038958,
+    "IC": 0.0273869360716579
+  },
+  "factor_names": [
+    "5_day_momentum",
+    "5_day_volatility",
+    "5_day_volume_change"
+  ],
+  "rdagent_decision": true,
+  "rdagent_decision_note": "这是 RD-Agent 自己的意见，**不是** Validation Gate 的判定。权威判定看 validation.json 的 status。",
+  "resources": {
+    "llm_calls": 24,
+    "models": [
+      "deepseek/deepseek-chat"
+    ],
+    "prompt_tokens": 52956,
+    "completion_tokens": 4786,
+    "usd_cost_this_loop": 0.016838,
+    "usd_accumulated_max": 0.016838,
+    "wall_clock_seconds": 568.4,
+    "started_utc": "2026-08-16T06:35:49.646276+00:00",
+    "ended_utc": "2026-08-16T06:45:18.038246+00:00"
+  }
+}

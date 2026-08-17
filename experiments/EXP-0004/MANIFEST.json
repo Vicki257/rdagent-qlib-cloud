@@ -1,0 +1,31 @@
+{
+  "experiment_id": "EXP-0004",
+  "registry_key": "2026-08-16_06-35-38-526479/Loop_0",
+  "market": "cn",
+  "public": true,
+  "status": "complete",
+  "missing_artifacts": [],
+  "source_log_dir": "log/2026-08-16_06-35-38-526479/Loop_0",
+  "source_pickles": {
+    "hypothesis": "direct_exp_gen/hypothesis generation/12800/2026-08-16_06-35-51-580373.pkl",
+    "tasks": "direct_exp_gen/experiment generation/12800/2026-08-16_06-35-56-111168.pkl",
+    "code": "coding/coder result/12800/2026-08-16_06-36-57-124492.pkl",
+    "runner": "running/runner result/12800/2026-08-16_06-45-14-410507.pkl",
+    "chart": "running/Quantitative Backtesting Chart/12800/2026-08-16_06-45-14-407059.pkl",
+    "feedback": "feedback/feedback/12800/2026-08-16_06-45-18-037922.pkl"
+  },
+  "extracted_utc": "2026-08-17T11:06:33+00:00",
+  "extracted_from_git_commit": "63f5247",
+  "files_written": [
+    "metadata.json",
+    "hypothesis.md",
+    "factor.py",
+    "metrics.json",
+    "validation.json",
+    "conclusion.md",
+    "config.yaml",
+    "config_baseline.yaml",
+    "backtest_curve.csv"
+  ],
+  "note": "这是从 log/ 抽出来的核心证据,不是完整日志。完整 RD-Agent 思考历史(每一次 LLM 调用、每一次代码试错)仍然只在 Codespace 的 log/ 里,Codespace 删了就没了 —— 这是有意的取舍:只保存未来研究需要的证据。"
+}

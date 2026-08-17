@@ -1,0 +1,64 @@
+{
+  "experiment_id": "EXP-0004",
+  "created_utc": "2026-08-17T11:06:33+00:00",
+  "market": "cn",
+  "public": true,
+  "mode": "research",
+  "frozen_test_used": false,
+  "data_range": [
+    "2008-01-01",
+    "2022-08-01"
+  ],
+  "train_range": [
+    "2008-01-01",
+    "2014-12-31"
+  ],
+  "validation_range": [
+    "2015-01-01",
+    "2016-12-31"
+  ],
+  "active_test_range": [
+    "2017-01-01",
+    "2020-08-01"
+  ],
+  "split_reference": {
+    "train": [
+      "2008-01-01",
+      "2014-12-31"
+    ],
+    "validation": [
+      "2015-01-01",
+      "2016-12-31"
+    ],
+    "research_oos": [
+      "2017-01-01",
+      "2020-08-01"
+    ],
+    "frozen_test": [
+      "2022-08-02",
+      "2026-08-14"
+    ]
+  },
+  "provider_uri": "~/.qlib/qlib_data/cn_data",
+  "qlib_market": "csi300",
+  "benchmark": "SH000300",
+  "limit_threshold": "0.095",
+  "factor_names": [
+    "5_day_momentum",
+    "5_day_volatility",
+    "5_day_volume_change"
+  ],
+  "validation_status": "FAIL",
+  "validation_reasons": [
+    "Gate3 新因子没有带来增量信息：Rank IC 0.039512 → 0.033299（Δ=-0.006213，需要 ≥ 0.0005）。新因子自己看起来漂不漂亮不重要，加进现有模型有没有新信息才重要。"
+  ],
+  "validation_warnings": [
+    "Gate1 该轮配置带市场标记：该轮的 config 没有 RDAGENT_QLIB_CLOUD_MARKET 标记（2026-08-17 引入 apply_market_config.py 之前跑的实验都没有）。从 provider_uri 推断市场为 cn。",
+    "Gate1（当前环境，不参与本轮判定）RD_AGENT_MARKET_NAME 已设置：环境变量 RD_AGENT_MARKET_NAME 没设。CN 用官方默认文字尚可接受，但 JP 模式下 RD-Agent 会拿默认的 'CSI300 / 2008-2020' 去描述日股数据。用 `source scripts/switch_market.sh <cn|jp>` 设置（必须 source）。",
+    "Gate2 分时段 IC 不可得（RD-Agent 未持久化逐日预测值），只有整体 IC"
+  ],
+  "rdagent_decision": true,
+  "next_direction": "Incorporating additional short-term factors such as 5-day average true range (ATR) or 5-day relative strength index (RSI) could further enhance predictive power while potentially managing drawdowns. Additionally, combining these factors with a risk overlay or volatility scaling might improve risk-adjusted returns.",
+  "rdagent_log_path": "log/2026-08-16_06-35-38-526479/Loop_0",
+  "known_risks": {}
+}
